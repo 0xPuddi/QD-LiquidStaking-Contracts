@@ -3,7 +3,7 @@
 
 const { getSelectors, FacetCutAction } = require('./libraries/diamond.js')
 
-async function deployDiamond () {
+async function deployDiamond() {
   const accounts = await ethers.getSigners()
   const contractOwner = accounts[0]
 
@@ -32,7 +32,12 @@ async function deployDiamond () {
   console.log('Deploying facets')
   const FacetNames = [
     'DiamondLoupeFacet',
-    'OwnershipFacet'
+    'OwnershipFacet',
+
+    'ERC20Facet',
+    'qdAVAXSettingsFacet',
+    'qdAVAXFacet',
+    'qdAVAXViewFacet'
   ]
   const cut = []
   for (const FacetName of FacetNames) {
@@ -47,14 +52,24 @@ async function deployDiamond () {
     })
   }
 
+  // deploy testing ERC1155 Address
+  const TestERC1155 = await ethers.getContractFactory('testERC1155')
+  const testERC1155 = await TestERC1155.deploy()
+  await testERC1155.deployed()
+  console.log('testERC1155 deployed:', testERC1155.address)
+
   // upgrade diamond with facets
   console.log('')
-  console.log('Diamond Cut:', cut)
+  // console.log('Diamond Cut:', cut)
   const diamondCut = await ethers.getContractAt('IDiamondCut', diamond.address)
   let tx
   let receipt
   // call to init function
-  let functionCall = diamondInit.interface.encodeFunctionData('init')
+  let functionCall = diamondInit.interface.encodeFunctionData('init', [
+    /// variables
+    // ERC1155 Avalanche Validator token address - casual input
+    testERC1155.address
+  ])
   tx = await diamondCut.diamondCut(cut, diamondInit.address, functionCall)
   console.log('Diamond cut tx: ', tx.hash)
   receipt = await tx.wait()
@@ -62,7 +77,7 @@ async function deployDiamond () {
     throw Error(`Diamond upgrade failed: ${tx.hash}`)
   }
   console.log('Completed diamond cut')
-  return diamond.address
+  return { diamond: diamond.address, ERC1155: testERC1155.address }
 }
 
 // We recommend this pattern to be able to use async/await everywhere

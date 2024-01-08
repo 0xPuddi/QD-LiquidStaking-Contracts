@@ -1,6 +1,7 @@
 
 /* global ethers task */
 require('@nomiclabs/hardhat-waffle')
+require("hardhat-gas-reporter");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -19,11 +20,16 @@ task('accounts', 'Prints the list of accounts', async () => {
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  solidity: '0.8.6',
+  solidity: '0.8.8',
   settings: {
     optimizer: {
       enabled: true,
       runs: 200
     }
+  },
+  gasReporter: {
+    currency: 'USD',
+    gasPrice: 21,
+    enabled: true
   }
 }
