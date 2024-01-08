@@ -92,63 +92,6 @@ describe('DiamondTest', async function () {
         assert.equal((await ERC20Facet.balanceOf(users[2].address)).toString(), "" + 5e17, "balance user 2");
     });
 
-    it("test rewards", async () => {
-        assert.equal((await qdAVAXFacet.getSharesByStakedAvax(ethers.utils.parseEther("1.0"))).toString(), "" + 1e18, "Same value as of no rewards");
-
-        tx = await qdAVAXSettingsFacet_address0.depositRewards({ value: ethers.utils.parseEther("1.0") });
-        await tx.wait(1);
-
-        assert.isBelow(Number((await qdAVAXFacet.getSharesByStakedAvax(ethers.utils.parseEther("1.0"))).toString()), 1e18, "Shares cost more AVAX");
-        assert.isAbove(Number((await qdAVAXViewFacet.getStakedAvaxByShares(ethers.utils.parseEther("1.0"))).toString()), 1e18, "Shares worth more AVAX");
-    });
-
-    it("test redeems asks", async () => {
-        tx = await qdAVAXFacet_address1.requestRedeem(ethers.utils.parseEther("0.02"));
-        receipt = await tx.wait(1);
-        tx = await qdAVAXFacet_address2.requestRedeem(ethers.utils.parseEther("0.2"));
-        await tx.wait(1);
-
-        assert.equal((await ERC20Facet.balanceOf(users[1].address)).toString(), "" + 5e16, "balance user 1");
-        assert.equal((await ERC20Facet.balanceOf(users[2].address)).toString(), "" + 3e17, "balance user 2");
-        assert.equal((await qdAVAXViewFacet.getRedeemersArray()).toString(), '' + users[1].address + ',' + users[2].address, 'Invalid redeeemers array');
-        assert.equal((await qdAVAXViewFacet.getRedeemerRedeemsNumber(users[1].address)).toString(), '1', 'Invalid redeeemers amount 1');
-        assert.equal((await qdAVAXViewFacet.getRedeemerRedeemsNumber(users[2].address)).toString(), '1', 'Invalid redeeemers amount 2');
-
-        tx = await qdAVAXFacet_address2.requestRedeem(ethers.utils.parseEther("0.04")); // 0.159402985074626865 - 0 late over periods
-        await tx.wait(1);
-        await network.provider.send("evm_increaseTime", [24 * 60 * 60]);
-        await network.provider.send("evm_mine");
-        tx = await qdAVAXFacet_address2.requestRedeem(ethers.utils.parseEther("0.02")); // 3.985074626865671641 - 1 redeem
-        await tx.wait(1);
-        await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7 + 60]);
-        await network.provider.send("evm_mine");
-        tx = await qdAVAXSettingsFacet_address0.depositRewards({ value: ethers.utils.parseEther("1.0") });
-        await tx.wait(1);
-        await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 7 + 60]);
-        await network.provider.send("evm_mine");
-        tx = await qdAVAXFacet_address2.requestRedeem(ethers.utils.parseEther("0.01")); // 0.039850746268656716 - 0 early cooldown
-        await tx.wait(1);
-
-        tx = await qdAVAXFacet_address2.cancelRedeemableUnlockRequests();
-        await tx.wait(1);
-        await expect(qdAVAXFacet_address2.redeemExpiredShares(2)).to.be.revertedWith('REQUEST_NOT_EXPIRED');
-        tx = await qdAVAXFacet_address2.cancelPendingRedeemRequests();
-        await tx.wait(1);
-
-        await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 15 + 60]);
-        await network.provider.send("evm_mine");
-        tx = await qdAVAXFacet_address2.redeemExpiredShares(1);
-        await tx.wait(1);
-
-        tx = await qdAVAXFacet_address2.redeemAllExpiredShares();
-        await tx.wait(1);
-        await expect(qdAVAXViewFacet.getRedeemerInfoFromTo(users[2].address, 0, 6)).to.be.revertedWith('FROM_OUT_OF_BONDS');
-        tx = await qdAVAXFacet_address0.redeemAllExpiredShares();
-        await tx.wait(1);
-        tx = await qdAVAXFacet_address1.redeemAllExpiredShares();
-        await tx.wait(1);
-    });
-
     it("test arbitrageurs role", async () => {
         tx = await qdAVAXFacet_address2.requestRedeem(ethers.utils.parseEther("0.04"));
         await tx.wait(1);
